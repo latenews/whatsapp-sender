@@ -13,3 +13,4 @@ Thumbs.db
 # 라이브러리 폴더 (보통 다시 설치하면 되므로 올리지 않음)
 node_modules/
 vendor/
+session/
