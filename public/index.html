@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp 발송</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0f0d; --surface: #111a14; --surface2: #162019;
+      --border: #1e3025; --green: #25d366; --green-glow: rgba(37,211,102,0.15);
+      --text: #e8f5ec; --text-dim: #7aaa8a; --text-muted: #3d6b4f;
+      --red: #ff4d4d; --yellow: #f5c518;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Sora', sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(37,211,102,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 30% at 80% 80%, rgba(37,211,102,0.04) 0%, transparent 50%);
+    }
+    .container { width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px; }
+    .header { display:flex; align-items:center; gap:14px; padding:0 4px 8px; border-bottom:1px solid var(--border); }
+    .logo { width:40px; height:40px; background:var(--green); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 0 20px rgba(37,211,102,0.3); }
+    .header-text h1 { font-size:18px; font-weight:700; letter-spacing:-0.3px; }
+    .header-text p { font-size:12px; color:var(--text-dim); font-family:'DM Mono',monospace; }
+    .status-bar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-muted); flex-shrink:0; transition:background 0.3s; }
+    .status-dot.connected { background:var(--green); box-shadow:0 0 8px rgba(37,211,102,0.6); animation:pulse 2s infinite; }
+    .status-dot.loading { background:var(--yellow); animation:blink 1s infinite; }
+    .status-dot.error { background:var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    #status-text { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:12px; }
+    .qr-section { display:none; flex-direction:column; align-items:center; gap:16px; padding:28px; background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+    .qr-section.show { display:flex; }
+    .qr-label { font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; }
+    #qr-img { width:200px; height:200px; border-radius:12px; border:2px solid var(--green); padding:8px; background:white; }
+    .qr-steps { font-size:12px; color:var(--text-muted); font-family:'DM Mono',monospace; text-align:center; line-height:1.8; }
+    .phone-row { display:flex; gap:10px; align-items:center; }
+    .phone-box { flex:1; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; }
+    .phone-box.sender { border-color:rgba(37,211,102,0.3); }
+    .phone-box.receiver { border-color:rgba(245,197,24,0.3); }
+    .phone-box-tag { font-size:10px; font-family:'DM Mono',monospace; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:4px; }
+    .sender .phone-box-tag { color:var(--green); }
+    .receiver .phone-box-tag { color:var(--yellow); }
+    .phone-box-num { font-size:14px; font-weight:600; font-family:'DM Mono',monospace; }
+    .arrow { font-size:18px; color:var(--text-muted); }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:14px; }
+    .section-label { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
+    textarea { background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Sora',sans-serif; font-size:14px; padding:14px; outline:none; transition:border-color 0.2s; width:100%; resize:vertical; min-height:130px; line-height:1.6; }
+    textarea:focus { border-color:var(--green); }
+    textarea::placeholder { color:var(--text-muted); }
+    .char-count { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-align:right; margin-top:-6px; }
+    .btn-send { width:100%; padding:16px; background:var(--green); border:none; border-radius:12px; color:#061009; font-family:'Sora',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-send:hover { background:#2be874; transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,211,102,0.25); }
+    .btn-send:active { transform:translateY(0); }
+    .btn-send:disabled { background:var(--text-muted); cursor:not-allowed; transform:none; box-shadow:none; color:#222; }
+    .result-box { display:none; padding:12px 14px; border-radius:10px; font-size:13px; font-family:'DM Mono',monospace; }
+    .result-box.success { display:block; background:rgba(37,211,102,0.08); border:1px solid rgba(37,211,102,0.25); color:var(--green); }
+    .result-box.fail { display:block; background:rgba(255,77,77,0.08); border:1px solid rgba(255,77,77,0.25); color:var(--red); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">💬</div>
+    <div class="header-text">
+      <h1>WhatsApp 발송</h1>
+      <p>154.66.198.71</p>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">연결 중...</span>
+  </div>
+  <div class="qr-section" id="qr-section">
+    <div class="qr-label">
+      <strong>0763111528</strong> 번호의 WhatsApp으로 QR 스캔<br>
+      <span style="font-size:11px;color:var(--text-muted);">최초 1회만 필요 · 이후 자동 유지</span>
+    </div>
+    <img id="qr-img" src="" alt="QR Code" />
+    <div class="qr-steps">
+      WhatsApp 앱 열기 → 설정 → 연결된 기기<br>
+      → 기기 연결 → QR 코드 스캔
+    </div>
+  </div>
+  <div class="phone-row">
+    <div class="phone-box sender">
+      <div class="phone-box-tag">📤 발신</div>
+      <div class="phone-box-num">076 311 1528</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="phone-box receiver">
+      <div class="phone-box-tag">📥 수신</div>
+      <div class="phone-box-num">064 979 4803</div>
+    </div>
+  </div>
+  <div class="card">
+    <div>
+      <div class="section-label">메시지 내용</div>
+      <textarea id="message" placeholder="전송할 메시지를 입력하세요..." maxlength="4096"
+        oninput="document.getElementById('char-count').textContent=this.value.length+' / 4096'"></textarea>
+      <div class="char-count" id="char-count">0 / 4096</div>
+    </div>
+    <button class="btn-send" id="send-btn" onclick="sendMessage()" disabled>
+      <span>📤</span> 064 979 4803 으로 전송
+    </button>
+    <div class="result-box" id="result-box"></div>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+socket.on('status', ({ ready, message }) => {
+  const dot = document.getElementById('status-dot');
+  document.getElementById('status-text').textContent = message;
+  dot.className = 'status-dot ' + (ready ? 'connected' : 'loading');
+  document.getElementById('send-btn').disabled = !ready;
+});
+socket.on('qr', (dataUrl) => {
+  document.getElementById('qr-img').src = dataUrl;
+  document.getElementById('qr-section').classList.add('show');
+});
+socket.on('ready', () => {
+  document.getElementById('qr-section').classList.remove('show');
+  document.getElementById('send-btn').disabled = false;
+});
+async function sendMessage() {
+  const message = document.getElementById('message').value.trim();
+  if (!message) return alert('메시지를 입력해주세요');
+  const btn = document.getElementById('send-btn');
+  const result = document.getElementById('result-box');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> 전송 중...';
+  result.className = 'result-box';
+  try {
+    const res = await fetch('/api/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className = 'result-box success';
+      result.textContent = '✓ 전송 완료 → +27649794803';
+      document.getElementById('message').value = '';
+      document.getElementById('char-count').textContent = '0 / 4096';
+    } else {
+      result.className = 'result-box fail';
+      result.textContent = '✗ 전송 실패: ' + (data.error || '알 수 없는 오류');
+    }
+  } catch (err) {
+    result.className = 'result-box fail';
+    result.textContent = '✗ 오류: ' + err.message;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<span>📤</span> 064 979 4803 으로 전송';
+}
+</script>
+</body>
+</html>
