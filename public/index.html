@@ -7,120 +7,216 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a0f0d; --surface: #111a14; --surface2: #162019;
-      --border: #1e3025; --green: #25d366; --green-glow: rgba(37,211,102,0.15);
-      --text: #e8f5ec; --text-dim: #7aaa8a; --text-muted: #3d6b4f;
-      --red: #ff4d4d; --yellow: #f5c518;
+      --bg:#0a0f0d; --surface:#111a14; --surface2:#162019;
+      --border:#1e3025; --green:#25d366; --green-glow:rgba(37,211,102,0.15);
+      --text:#e8f5ec; --text-dim:#7aaa8a; --text-muted:#3d6b4f;
+      --red:#ff4d4d; --yellow:#f5c518; --blue:#4da6ff;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      background: var(--bg); color: var(--text);
-      font-family: 'Sora', sans-serif;
-      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
-      background-image:
-        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(37,211,102,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 30% 30% at 80% 80%, rgba(37,211,102,0.04) 0%, transparent 50%);
+      background:var(--bg); color:var(--text); font-family:'Sora',sans-serif;
+      min-height:100vh; padding:24px;
+      background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(37,211,102,0.06) 0%,transparent 60%);
     }
-    .container { width:100%; max-width:520px; display:flex; flex-direction:column; gap:16px; }
-    .header { display:flex; align-items:center; gap:14px; padding:0 4px 8px; border-bottom:1px solid var(--border); }
+    .layout { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .col { display:flex; flex-direction:column; gap:16px; }
+
+    /* 헤더 */
+    .header { display:flex; align-items:center; gap:14px; padding:0 4px 16px; border-bottom:1px solid var(--border); margin-bottom:4px; grid-column:1/-1; }
     .logo { width:40px; height:40px; background:var(--green); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 0 20px rgba(37,211,102,0.3); }
-    .header-text h1 { font-size:18px; font-weight:700; letter-spacing:-0.3px; }
+    .header-text h1 { font-size:18px; font-weight:700; }
     .header-text p { font-size:12px; color:var(--text-dim); font-family:'DM Mono',monospace; }
-    .status-bar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; }
-    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-muted); flex-shrink:0; transition:background 0.3s; }
+    .status-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-left:auto; }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-muted); flex-shrink:0; }
     .status-dot.connected { background:var(--green); box-shadow:0 0 8px rgba(37,211,102,0.6); animation:pulse 2s infinite; }
     .status-dot.loading { background:var(--yellow); animation:blink 1s infinite; }
-    .status-dot.error { background:var(--red); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
     #status-text { color:var(--text-dim); font-family:'DM Mono',monospace; font-size:12px; }
-    .qr-section { display:none; flex-direction:column; align-items:center; gap:16px; padding:28px; background:var(--surface); border:1px solid var(--border); border-radius:16px; }
-    .qr-section.show { display:flex; }
-    .qr-label { font-size:13px; color:var(--text-dim); text-align:center; line-height:1.6; }
-    #qr-img { width:200px; height:200px; border-radius:12px; border:2px solid var(--green); padding:8px; background:white; }
-    .qr-steps { font-size:12px; color:var(--text-muted); font-family:'DM Mono',monospace; text-align:center; line-height:1.8; }
-    .phone-row { display:flex; gap:10px; align-items:center; }
-    .phone-box { flex:1; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; }
-    .phone-box.sender { border-color:rgba(37,211,102,0.3); }
-    .phone-box.receiver { border-color:rgba(245,197,24,0.3); }
-    .phone-box-tag { font-size:10px; font-family:'DM Mono',monospace; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:4px; }
-    .sender .phone-box-tag { color:var(--green); }
-    .receiver .phone-box-tag { color:var(--yellow); }
-    .phone-box-num { font-size:14px; font-weight:600; font-family:'DM Mono',monospace; }
-    .arrow { font-size:18px; color:var(--text-muted); }
+
+    /* 카드 */
     .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:14px; }
-    .section-label { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
-    textarea { background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Sora',sans-serif; font-size:14px; padding:14px; outline:none; transition:border-color 0.2s; width:100%; resize:vertical; min-height:130px; line-height:1.6; }
-    textarea:focus { border-color:var(--green); }
-    textarea::placeholder { color:var(--text-muted); }
-    .char-count { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-align:right; margin-top:-6px; }
-    .btn-send { width:100%; padding:16px; background:var(--green); border:none; border-radius:12px; color:#061009; font-family:'Sora',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
-    .btn-send:hover { background:#2be874; transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,211,102,0.25); }
-    .btn-send:active { transform:translateY(0); }
+    .card-title { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px; }
+
+    /* QR */
+    .qr-section { display:none; flex-direction:column; align-items:center; gap:12px; padding:24px; background:var(--surface); border:1px solid var(--border); border-radius:16px; grid-column:1/-1; }
+    .qr-section.show { display:flex; }
+    #qr-img { width:180px; height:180px; border-radius:10px; border:2px solid var(--green); padding:6px; background:white; }
+
+    /* 폼 요소 */
+    select, input[type="text"], textarea {
+      background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+      color:var(--text); font-family:'Sora',sans-serif; font-size:14px;
+      padding:11px 14px; outline:none; transition:border-color 0.2s; width:100%;
+    }
+    select:focus, input:focus, textarea:focus { border-color:var(--green); }
+    textarea { resize:vertical; min-height:100px; line-height:1.6; }
+    textarea::placeholder, input::placeholder { color:var(--text-muted); }
+    .row { display:flex; gap:8px; }
+    .char-count { font-size:11px; font-family:'DM Mono',monospace; color:var(--text-muted); text-align:right; }
+
+    /* 버튼 */
+    .btn { padding:11px 16px; border:none; border-radius:10px; font-family:'Sora',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+    .btn-green { background:var(--green); color:#061009; }
+    .btn-green:hover { background:#2be874; }
+    .btn-outline { background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); }
+    .btn-outline:hover { border-color:var(--green); color:var(--green); }
+    .btn-blue { background:rgba(77,166,255,0.15); border:1px solid rgba(77,166,255,0.3); color:var(--blue); }
+    .btn-blue:hover { background:rgba(77,166,255,0.25); }
+    .btn-send { width:100%; padding:14px; background:var(--green); border:none; border-radius:12px; color:#061009; font-family:'Sora',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .btn-send:hover { background:#2be874; transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,211,102,0.25); }
     .btn-send:disabled { background:var(--text-muted); cursor:not-allowed; transform:none; box-shadow:none; color:#222; }
-    .result-box { display:none; padding:12px 14px; border-radius:10px; font-size:13px; font-family:'DM Mono',monospace; }
+    .btn-menu { width:100%; padding:14px; background:rgba(77,166,255,0.15); border:1px solid rgba(77,166,255,0.3); border-radius:12px; color:var(--blue); font-family:'Sora',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .btn-menu:hover { background:rgba(77,166,255,0.25); transform:translateY(-1px); }
+    .btn-menu:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+
+    /* 결과 */
+    .result-box { display:none; padding:10px 14px; border-radius:10px; font-size:13px; font-family:'DM Mono',monospace; }
     .result-box.success { display:block; background:rgba(37,211,102,0.08); border:1px solid rgba(37,211,102,0.25); color:var(--green); }
     .result-box.fail { display:block; background:rgba(255,77,77,0.08); border:1px solid rgba(255,77,77,0.25); color:var(--red); }
+
+    /* 번호 목록 */
+    .divider { height:1px; background:var(--border); }
+    .add-section { display:none; flex-direction:column; gap:8px; padding:14px; background:var(--surface2); border-radius:10px; border:1px solid var(--border); }
+    .add-section.show { display:flex; }
+    .number-list { display:flex; flex-direction:column; gap:4px; }
+    .number-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surface); border-radius:8px; font-size:12px; font-family:'DM Mono',monospace; color:var(--text-dim); }
+    .del-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; transition:color 0.2s; }
+    .del-btn:hover { color:var(--red); }
+
+    /* 메뉴 미리보기 */
+    .menu-list { display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; }
+    .menu-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:8px; }
+    .menu-no { font-family:'DM Mono',monospace; font-size:12px; color:var(--green); font-weight:600; width:20px; flex-shrink:0; }
+    .menu-info { flex:1; }
+    .menu-name { font-size:13px; font-weight:600; }
+    .menu-sub { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+    .menu-price { font-family:'DM Mono',monospace; font-size:13px; font-weight:600; color:var(--green); }
+    .empty-menu { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+    /* 주문 수신 */
+    .orders-list { display:flex; flex-direction:column; gap:10px; max-height:500px; overflow-y:auto; }
+    .order-card { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px; }
+    .order-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .order-sender { font-size:13px; font-weight:600; color:var(--green); }
+    .order-time { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+    .order-raw { font-size:12px; color:var(--text-dim); font-family:'DM Mono',monospace; padding:8px; background:var(--surface); border-radius:6px; margin-bottom:8px; }
+    .order-items { display:flex; flex-direction:column; gap:4px; }
+    .order-item { display:flex; align-items:center; justify-content:space-between; font-size:13px; padding:6px 10px; background:var(--surface); border-radius:6px; }
+    .order-item-name { color:var(--text); }
+    .order-item-qty { font-family:'DM Mono',monospace; font-weight:600; color:var(--green); }
+    .order-total { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:12px; color:var(--text-dim); font-family:'DM Mono',monospace; text-align:right; }
+    .msg-card { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+    .msg-header { display:flex; justify-content:space-between; margin-bottom:6px; }
+    .msg-sender { font-size:12px; color:var(--text-dim); }
+    .msg-time { font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+    .msg-text { font-size:13px; color:var(--yellow); }
+    .badge { padding:2px 8px; border-radius:20px; font-size:10px; font-family:'DM Mono',monospace; font-weight:600; }
+    .badge-order { background:rgba(37,211,102,0.15); color:var(--green); border:1px solid rgba(37,211,102,0.3); }
+    .badge-msg { background:rgba(245,197,24,0.15); color:var(--yellow); border:1px solid rgba(245,197,24,0.3); }
+    .no-orders { padding:30px 20px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+    @media(max-width:768px){ .layout{grid-template-columns:1fr;} .header{grid-column:1;} .qr-section{grid-column:1;} }
   </style>
 </head>
 <body>
-<div class="container">
+<div class="layout">
+
+  <!-- 헤더 -->
   <div class="header">
     <div class="logo">💬</div>
     <div class="header-text">
-      <h1>WhatsApp 발송</h1>
-      <p>154.66.198.71</p>
+      <h1>WhatsApp 주문 시스템</h1>
+      <p>154.66.198.71 · 076 311 1528</p>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot loading" id="status-dot"></div>
+      <span id="status-text">연결 중...</span>
     </div>
   </div>
-  <div class="status-bar">
-    <div class="status-dot loading" id="status-dot"></div>
-    <span id="status-text">연결 중...</span>
-  </div>
+
+  <!-- QR -->
   <div class="qr-section" id="qr-section">
-    <div class="qr-label">
-      <strong>0763111528</strong> 번호의 WhatsApp으로 QR 스캔<br>
-      <span style="font-size:11px;color:var(--text-muted);">최초 1회만 필요 · 이후 자동 유지</span>
+    <div style="font-size:13px;color:var(--text-dim);text-align:center">
+      <strong>0763111528</strong> WhatsApp으로 QR 스캔
     </div>
-    <img id="qr-img" src="" alt="QR Code" />
-    <div class="qr-steps">
-      WhatsApp 앱 열기 → 설정 → 연결된 기기<br>
-      → 기기 연결 → QR 코드 스캔
+    <img id="qr-img" src="" alt="QR" />
+    <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;text-align:center">
+      WhatsApp → 설정 → 연결된 기기 → 기기 연결
     </div>
   </div>
-  <div class="phone-row">
-    <div class="phone-box sender">
-      <div class="phone-box-tag">📤 발신</div>
-      <div class="phone-box-num">076 311 1528</div>
+
+  <!-- 왼쪽: 발송 -->
+  <div class="col">
+
+    <!-- 수신 번호 -->
+    <div class="card">
+      <div class="card-title">수신 번호</div>
+      <div class="row">
+        <select id="number-select"></select>
+        <button class="btn btn-outline" onclick="toggleAdd()">+ 추가</button>
+      </div>
+      <div class="add-section" id="add-section">
+        <input type="text" id="new-label" placeholder="이름 (예: 홍길동)" />
+        <input type="text" id="new-number" placeholder="번호 (예: 0649794803)" />
+        <div class="row">
+          <button class="btn btn-green" style="flex:1" onclick="addNumber()">저장</button>
+          <button class="btn btn-outline" onclick="toggleAdd()">취소</button>
+        </div>
+      </div>
+      <div class="number-list" id="number-list"></div>
     </div>
-    <div class="arrow">→</div>
-    <div class="phone-box receiver">
-      <div class="phone-box-tag">📥 수신</div>
-      <div class="phone-box-num">064 979 4803</div>
+
+    <!-- 메뉴 발송 -->
+    <div class="card">
+      <div class="card-title">메뉴 발송</div>
+      
+      <div id="menu-preview"></div>
+      <button class="btn-menu" id="btn-send-menu" onclick="sendMenuAuto()" disabled>📋 상품 목록 발송</button>
+      <div class="result-box" id="menu-result"></div>
     </div>
-  </div>
-  <div class="card">
-    <div>
-      <div class="section-label">메시지 내용</div>
-      <textarea id="message" placeholder="전송할 메시지를 입력하세요..." maxlength="4096"
-        oninput="document.getElementById('char-count').textContent=this.value.length+' / 4096'"></textarea>
+
+    <!-- 일반 메시지 -->
+    <div class="card">
+      <div class="card-title">일반 메시지</div>
+      <textarea id="message" placeholder="전송할 메시지를 입력하세요..."
+        oninput="document.getElementById('char-count').textContent=this.value.length+' / 4096'"
+        maxlength="4096"></textarea>
       <div class="char-count" id="char-count">0 / 4096</div>
+      <button class="btn-send" id="send-btn" onclick="sendMessage()" disabled>📤 메시지 전송</button>
+      <div class="result-box" id="result-box"></div>
     </div>
-    <button class="btn-send" id="send-btn" onclick="sendMessage()" disabled>
-      <span>📤</span> 064 979 4803 으로 전송
-    </button>
-    <div class="result-box" id="result-box"></div>
+
   </div>
+
+  <!-- 오른쪽: 수신 주문 -->
+  <div class="col">
+    <div class="card" style="flex:1">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title">📩 수신된 주문 / 메시지</div>
+        <button class="btn btn-outline" style="font-size:11px;padding:6px 12px;" onclick="clearOrders()">지우기</button>
+      </div>
+      <div class="orders-list" id="orders-list">
+        <div class="no-orders">아직 수신된 주문이 없습니다<br><span style="font-size:11px;color:var(--text-muted)">메뉴를 발송하고 응답을 기다려주세요</span></div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+let menuItems = [];
+
 socket.on('status', ({ ready, message }) => {
   const dot = document.getElementById('status-dot');
   document.getElementById('status-text').textContent = message;
   dot.className = 'status-dot ' + (ready ? 'connected' : 'loading');
   document.getElementById('send-btn').disabled = !ready;
+  document.getElementById('btn-send-menu').disabled = !ready;
 });
-socket.on('qr', (dataUrl) => {
+socket.on('qr', dataUrl => {
   document.getElementById('qr-img').src = dataUrl;
   document.getElementById('qr-section').classList.add('show');
 });
@@ -128,37 +224,272 @@ socket.on('ready', () => {
   document.getElementById('qr-section').classList.remove('show');
   document.getElementById('send-btn').disabled = false;
 });
-async function sendMessage() {
-  const message = document.getElementById('message').value.trim();
-  if (!message) return alert('메시지를 입력해주세요');
-  const btn = document.getElementById('send-btn');
-  const result = document.getElementById('result-box');
-  btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span> 전송 중...';
-  result.className = 'result-box';
+
+// 주문 수신
+socket.on('order_received', (data) => {
+  addOrderCard(data);
+});
+
+// 일반 메시지 수신
+socket.on('message_received', (data) => {
+  addMsgCard(data);
+});
+
+function addOrderCard(data) {
+  const list = document.getElementById('orders-list');
+  const noOrders = list.querySelector('.no-orders');
+  if (noOrders) noOrders.remove();
+
+  const total = data.orders.reduce((sum, o) => sum + (o.item.price * o.qty), 0);
+
+  const card = document.createElement('div');
+  card.className = 'order-card';
+  card.innerHTML = `
+    <div class="order-header">
+      <div>
+        <span class="order-sender">📱 ${data.sender}</span>
+        <span class="badge badge-order" style="margin-left:8px">주문</span>
+      </div>
+      <span class="order-time">${data.receivedAt}</span>
+    </div>
+    <div class="order-raw">💬 "${data.rawText}"</div>
+    <div class="order-items">
+      ${data.orders.map(o => `
+        <div class="order-item">
+          <span class="order-item-name">${o.no}. ${o.item.item_name}${o.item.brand ? ' ('+o.item.brand+')' : ''}</span>
+          <span class="order-item-qty">× ${o.qty} = R${(o.item.price * o.qty).toLocaleString()}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="order-total">합계: R${total.toLocaleString()}</div>
+    <div style="margin-top:6px;font-size:11px;font-family:'DM Mono',monospace;color:${data.userId ? 'var(--green)' : 'var(--yellow)'}">
+      ${data.userId ? '✓ DB 저장완료 (order_id: ' + data.savedOrders.join(', ') + ')' : '⚠️ 미등록 회원 - DB 저장 안됨'}
+    </div>
+  `;
+  list.insertBefore(card, list.firstChild);
+}
+
+function addMsgCard(data) {
+  const list = document.getElementById('orders-list');
+  const noOrders = list.querySelector('.no-orders');
+  if (noOrders) noOrders.remove();
+
+  const card = document.createElement('div');
+  card.className = 'msg-card';
+  card.innerHTML = `
+    <div class="msg-header">
+      <span class="msg-sender">📱 ${data.sender} <span class="badge badge-msg">메시지</span></span>
+      <span class="msg-time">${data.receivedAt}</span>
+    </div>
+    <div class="msg-text">${data.text}</div>
+  `;
+  list.insertBefore(card, list.firstChild);
+}
+
+function clearOrders() {
+  document.getElementById('orders-list').innerHTML =
+    '<div class="no-orders">아직 수신된 주문이 없습니다<br><span style="font-size:11px;color:var(--text-muted)">메뉴를 발송하고 응답을 기다려주세요</span></div>';
+}
+
+// 번호 목록
+async function loadNumbers() {
+  const res = await fetch('/api/numbers');
+  const numbers = await res.json();
+  const select = document.getElementById('number-select');
+  const list = document.getElementById('number-list');
+  select.innerHTML = numbers.map(n =>
+    `<option value="${n.number}">${n.label} (+${n.number})</option>`
+  ).join('');
+  list.innerHTML = numbers.map(n => `
+    <div class="number-item">
+      <span>${n.label} · +${n.number}</span>
+      <button class="del-btn" onclick="deleteNumber('${n.number}')">×</button>
+    </div>
+  `).join('');
+}
+
+function toggleAdd() {
+  document.getElementById('add-section').classList.toggle('show');
+  document.getElementById('new-label').value='';
+  document.getElementById('new-number').value='';
+}
+
+async function addNumber() {
+  const label  = document.getElementById('new-label').value.trim();
+  const number = document.getElementById('new-number').value.trim();
+  if (!number) return alert('번호를 입력해주세요');
+  const res = await fetch('/api/numbers', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ label: label||number, number }),
+  });
+  const data = await res.json();
+  if (data.error) return alert(data.error);
+  toggleAdd();
+  loadNumbers();
+}
+
+async function deleteNumber(number) {
+  if (!confirm('이 번호를 삭제할까요?')) return;
+  await fetch(`/api/numbers/${number}`, { method:'DELETE' });
+  loadNumbers();
+}
+
+// 상품 목록 불러오기 + 발송 한번에
+async function sendMenuAuto() {
+  const number = document.getElementById("number-select").value;
+  if (!number) return alert("수신 번호를 선택해주세요");
+  const btn = document.getElementById("btn-send-menu");
+  const result = document.getElementById("menu-result");
+  btn.disabled=true; btn.textContent="⏳ 발송 중...";
+  result.className="result-box";
   try {
-    const res = await fetch('/api/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+    const res = await fetch("/api/send-menu", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ number }),
     });
     const data = await res.json();
     if (data.success) {
-      result.className = 'result-box success';
-      result.textContent = '✓ 전송 완료 → +27649794803';
-      document.getElementById('message').value = '';
-      document.getElementById('char-count').textContent = '0 / 4096';
+      result.className="result-box success";
+      result.textContent="✓ 상품 목록 발송 완료 → +"+number;
+      await loadMenu();
     } else {
-      result.className = 'result-box fail';
-      result.textContent = '✗ 전송 실패: ' + (data.error || '알 수 없는 오류');
+      result.className="result-box fail";
+      result.textContent="✗ "+data.error;
     }
-  } catch (err) {
-    result.className = 'result-box fail';
-    result.textContent = '✗ 오류: ' + err.message;
+  } catch(err) {
+    result.className="result-box fail";
+    result.textContent="✗ "+err.message;
+  }
+  btn.disabled=false;
+  btn.textContent="📋 상품 목록 발송";
+}
+
+
+// 상품 목록 자동 로드 후 발송
+async function sendMenuAll() {
+  const number = document.getElementById('number-select').value;
+  if (!number) return alert('수신 번호를 선택해주세요');
+  const btn = document.getElementById('btn-send-menu');
+  const result = document.getElementById('menu-result');
+  btn.disabled=true; btn.textContent='⏳ 발송 중...';
+  result.className='result-box';
+  try {
+    const res = await fetch('/api/send-menu', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ number }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className='result-box success';
+      result.textContent='✓ 상품 목록 발송 완료 → +'+number;
+      await loadMenu();
+    } else {
+      result.className='result-box fail';
+      result.textContent='✗ '+data.error;
+    }
+  } catch(err) {
+    result.className='result-box fail';
+    result.textContent='✗ '+err.message;
+  }
+  btn.disabled=false;
+  btn.textContent='📋 상품 목록 발송';
+}
+
+// 메뉴 로드
+async function loadMenu() {
+  document.getElementById('menu-preview').innerHTML = '<div class="empty-menu">불러오는 중...</div>';
+  try {
+    const res = await fetch('/api/menu');
+    const data = await res.json();
+    menuItems = data.data || [];
+    if (!menuItems.length) {
+      document.getElementById('menu-preview').innerHTML = '<div class="empty-menu">등록된 상품이 없습니다</div>';
+      return;
+    }
+    document.getElementById('menu-preview').innerHTML = `
+      <div class="menu-list">
+        ${menuItems.map((item, i) => `
+          <div class="menu-item">
+            <div class="menu-no">${i+1}</div>
+            <div class="menu-info">
+              <div class="menu-name">${item.item_name}${item.brand ? ' · '+item.brand : ''}</div>
+              <div class="menu-sub">${item.volume || ''}</div>
+            </div>
+            <div class="menu-price">R${item.price}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    document.getElementById('btn-send-menu').disabled = false;
+  } catch(err) {
+    document.getElementById('menu-preview').innerHTML = `<div class="empty-menu" style="color:var(--red)">로드 실패: ${err.message}</div>`;
+  }
+}
+
+// 메뉴 발송
+async function sendMenu() {
+  const number = document.getElementById('number-select').value;
+  if (!number) return alert('수신 번호를 선택해주세요');
+  const btn = document.getElementById('btn-send-menu');
+  const result = document.getElementById('menu-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ 발송 중...';
+  result.className = 'result-box';
+  try {
+    const res = await fetch('/api/send-menu', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ number }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className='result-box success';
+      result.textContent='✓ 메뉴 발송 완료 → +'+number;
+    } else {
+      result.className='result-box fail';
+      result.textContent='✗ '+data.error;
+    }
+  } catch(err) {
+    result.className='result-box fail';
+    result.textContent='✗ '+err.message;
   }
   btn.disabled = false;
-  btn.innerHTML = '<span>📤</span> 064 979 4803 으로 전송';
+  btn.textContent = '📤 선택한 번호로 메뉴 발송';
 }
+
+// 일반 메시지 전송
+async function sendMessage() {
+  const message = document.getElementById('message').value.trim();
+  const number  = document.getElementById('number-select').value;
+  if (!message) return alert('메시지를 입력해주세요');
+  if (!number)  return alert('수신 번호를 선택해주세요');
+  const btn = document.getElementById('send-btn');
+  const result = document.getElementById('result-box');
+  btn.disabled=true; btn.textContent='⏳ 전송 중...';
+  result.className='result-box';
+  try {
+    const res = await fetch('/api/send', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message, number }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className='result-box success';
+      result.textContent='✓ 전송 완료 → +'+number;
+      document.getElementById('message').value='';
+      document.getElementById('char-count').textContent='0 / 4096';
+    } else {
+      result.className='result-box fail';
+      result.textContent='✗ '+data.error;
+    }
+  } catch(err) {
+    result.className='result-box fail';
+    result.textContent='✗ '+err.message;
+  }
+  btn.disabled=false;
+  btn.textContent='📤 메시지 전송';
+}
+
+loadNumbers();
 </script>
 </body>
 </html>
