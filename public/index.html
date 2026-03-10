@@ -263,8 +263,11 @@ function addOrderCard(data) {
     </div>
     <div class="order-total">합계: R${total.toLocaleString()}</div>
     <div style="margin-top:6px;font-size:11px;font-family:'DM Mono',monospace;color:${data.userId ? 'var(--green)' : 'var(--yellow)'}">
-      ${data.userId ? '✓ DB 저장완료 (order_id: ' + data.savedOrders.join(', ') + ')' : '⚠️ 미등록 회원 - DB 저장 안됨'}
+      ${data.userId ? '✓ DB 저장완료' : '⚠️ 미등록 회원 - DB 저장 안됨'}
     </div>
+    ${data.isFinal ? `<div style="margin-top:8px;text-align:right">
+      <a href="about:blank" target="_blank" style="color:#00a4e4;font-size:14px;font-weight:700;text-decoration:underline;cursor:pointer;">결제</a>
+    </div>` : ''}
   `;
   list.insertBefore(card, list.firstChild);
 }
@@ -284,6 +287,45 @@ function addMsgCard(data) {
     <div class="msg-text">${data.text}</div>
   `;
   list.insertBefore(card, list.firstChild);
+}
+
+function goPayfast(orders, total, senderNumber) {
+  // PayFast 샌드박스 테스트
+  const merchantId  = '10000100';  // 테스트용 ID
+  const merchantKey = '46f0cd694581a';  // 테스트용 Key
+  const returnUrl   = 'http://154.66.198.71:3000/payment-success.html';
+  const cancelUrl   = 'http://154.66.198.71:3000/payment-cancel.html';
+  const notifyUrl   = 'http://154.66.198.71:3000/api/payment-notify';
+
+  const itemName = orders.map(o => o.item.item_name + ' x' + o.qty).join(', ');
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://sandbox.payfast.co.za/eng/process';
+  form.target = '_blank';
+
+  const fields = {
+    merchant_id:  merchantId,
+    merchant_key: merchantKey,
+    return_url:   returnUrl,
+    cancel_url:   cancelUrl,
+    notify_url:   notifyUrl,
+    name_first:   senderNumber,
+    amount:       total.toFixed(2),
+    item_name:    itemName.substring(0, 100),
+  };
+
+  for (const [key, value] of Object.entries(fields)) {
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = key;
+    input.value = value;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function clearOrders() {

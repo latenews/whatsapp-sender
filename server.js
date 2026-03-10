@@ -50,6 +50,10 @@ let menuCache = [];
 let sock = null;
 let clientReady = false;
 
+// 발신자별 주문 누적 저장소
+// { '27649794803': { orders: [...], userId: null, senderLabel: '' } }
+const orderSessions = {};
+
 function parseOrder(text) {
   const results = [];
   const t = text.trim();
@@ -168,55 +172,178 @@ async function connectWhatsApp() {
         }
       }
 
+      // 결제 대기 상태에서 0(취소) 또는 9(결제) 처리
+      const curSession = orderSessions[senderNumber];
+      if (curSession && curSession.awaitingPayment) {
+        if (text.trim() === '0') {
+          delete orderSessions[senderNumber];
+          await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
+            text: '주문이 취소되었습니다.'
+          });
+          console.log('주문 취소: ' + senderNumber);
+          continue;
+        }
+        if (text.trim() === '9') {
+          await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
+            text: 'http://gchase.co.za/payment.html'
+          });
+          delete orderSessions[senderNumber];
+          console.log('결제 URL 발송: ' + senderNumber);
+          continue;
+        }
+      }
+
+      // 0 입력 시 주문 종료 및 최종 확인
+      if (text.trim() === '0') {
+        const session = orderSessions[senderNumber];
+        if (!session || session.orders.length === 0) {
+          await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
+            text: '주문 내역이 없습니다.'
+          });
+        } else {
+          // 회원 조회
+          let userId = session.userId;
+          if (!userId) {
+            try {
+              const localNumber = '0' + senderNumber.slice(2);
+              const plusNumber = '+' + senderNumber;
+              const [members] = await pool.query(
+                'SELECT user_id FROM members WHERE phone = ? OR phone = ? OR phone = ? LIMIT 1',
+                [senderNumber, localNumber, plusNumber]
+              );
+              if (members.length > 0) userId = members[0].user_id;
+            } catch(e) {}
+          }
+
+          // orders 테이블에 저장
+          const savedOrders = [];
+          if (userId) {
+            for (const order of session.orders) {
+              try {
+                const totalPrice = order.item.price * order.qty;
+                const [result] = await pool.query(
+                  'INSERT INTO orders (user_id, item_id, quantity, total_price, status) VALUES (?, ?, ?, ?, 1)',
+                  [userId, order.item.item_id, order.qty, totalPrice]
+                );
+                savedOrders.push(result.insertId);
+              } catch(e) { console.log('주문 저장 실패:', e.message); }
+            }
+          }
+
+          // 최종 확인 메시지 발송
+          const total = session.orders.reduce((sum, o) => sum + (o.item.price * o.qty), 0);
+          const lines = [];
+          lines.push('[최종 주문 확인]');
+          lines.push('---');
+          session.orders.forEach(o => {
+            let line = o.item.item_name;
+            if (o.item.brand) line += ' (' + o.item.brand + ')';
+            line += ' x ' + o.qty + ' = R' + (o.item.price * o.qty).toLocaleString();
+            lines.push(line);
+          });
+          lines.push('---');
+          lines.push('합계: R' + total.toLocaleString());
+          lines.push(new Date().toLocaleString('ko-KR'));
+          lines.push(userId ? '주문이 저장되었습니다.' : '미등록 회원입니다. 관리자에게 문의해주세요.');
+          const confirmText = lines.join('\n');
+          await sock.sendMessage(senderNumber + '@s.whatsapp.net', { text: confirmText });
+          console.log('최종 주문 확인 발송: ' + senderNumber);
+
+          // 결제 선택 메시지 발송
+          await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
+            text: '0: 취소\n9: 결제'
+          });
+
+
+
+
+
+
+
+          // 화면에 표시
+          io.emit('order_received', {
+            sender: senderLabel,
+            senderNumber,
+            rawText: '주문 완료 (0 입력)',
+            orders: session.orders,
+            savedOrders,
+            userId,
+            isFinal: true,
+            receivedAt: new Date().toLocaleString('ko-KR'),
+          });
+
+          // 결제 대기 상태로 변경
+          orderSessions[senderNumber] = { orders: [], awaitingPayment: true };
+        }
+        continue;
+      }
+
       // 주문 파싱
       const orders = parseOrder(text);
       if (orders.length > 0) {
-        // 수신 번호로 회원 조회 (0으로 시작하는 로컬 번호로 변환해서 검색)
+        // 회원 조회
         let userId = null;
         try {
-          const localNumber = '0' + senderNumber.slice(2); // 27649... → 0649...
+          const localNumber = '0' + senderNumber.slice(2);
+          const plusNumber = '+' + senderNumber;
           const [members] = await pool.query(
-            'SELECT user_id FROM members WHERE phone = ? OR phone = ? LIMIT 1',
-            [senderNumber, localNumber]
+            'SELECT user_id FROM members WHERE phone = ? OR phone = ? OR phone = ? LIMIT 1',
+            [senderNumber, localNumber, plusNumber]
           );
           if (members.length > 0) {
             userId = members[0].user_id;
-            console.log(`✓ 회원 찾음: user_id=${userId}`);
-          } else {
-            console.log(`⚠️ 미등록 회원: ${senderNumber}`);
+            console.log('회원 찾음: user_id=' + userId);
           }
-        } catch(e) {
-          console.log('회원 조회 실패:', e.message);
+        } catch(e) { console.log('회원 조회 실패:', e.message); }
+
+        // 주문 세션에 누적
+        if (!orderSessions[senderNumber]) {
+          orderSessions[senderNumber] = { orders: [], userId, senderLabel };
+        }
+        // 같은 번호 상품이면 수량 합산
+        for (const order of orders) {
+          const existing = orderSessions[senderNumber].orders.find(o => o.no === order.no);
+          if (existing) {
+            existing.qty += order.qty;
+          } else {
+            orderSessions[senderNumber].orders.push({ ...order });
+          }
         }
 
-        // orders 테이블에 저장
-        const savedOrders = [];
-        if (userId) {
-          for (const order of orders) {
-            try {
-              const totalPrice = order.item.price * order.qty;
-              const [result] = await pool.query(
-                'INSERT INTO orders (user_id, item_id, quantity, total_price, status) VALUES (?, ?, ?, ?, 1)',
-                [userId, order.item.item_id, order.qty, totalPrice]
-              );
-              savedOrders.push(result.insertId);
-              console.log(`✓ 주문 저장: order_id=${result.insertId}`);
-            } catch(e) {
-              console.log('주문 저장 실패:', e.message);
-            }
-          }
-        }
+        const session = orderSessions[senderNumber];
+        const subtotal = orders.reduce((sum, o) => sum + (o.item.price * o.qty), 0);
+        const runningTotal = session.orders.reduce((sum, o) => sum + (o.item.price * o.qty), 0);
+
+        // 누적 현황 답장
+        const lines = [];
+        lines.push('[주문 추가됨]');
+        orders.forEach(o => {
+          let line = o.item.item_name;
+          if (o.item.brand) line += ' (' + o.item.brand + ')';
+          line += ' x ' + o.qty + ' = R' + (o.item.price * o.qty).toLocaleString();
+          lines.push(line);
+        });
+        lines.push('---');
+        lines.push('[현재 누적 주문]');
+        session.orders.forEach(o => {
+          let line = o.no + '. ' + o.item.item_name + ' x ' + o.qty;
+          lines.push(line);
+        });
+        lines.push('누적 합계: R' + runningTotal.toLocaleString());
+        lines.push('계속 주문하거나 0을 입력하면 주문이 완료됩니다.');
+        const replyText = lines.join('\n');
+        await sock.sendMessage(senderNumber + '@s.whatsapp.net', { text: replyText });
 
         io.emit('order_received', {
           sender: senderLabel,
           senderNumber,
           rawText: text,
-          orders,
-          savedOrders,
+          orders: session.orders,
+          savedOrders: [],
           userId,
           receivedAt: new Date().toLocaleString('ko-KR'),
         });
-        console.log(`✓ 주문 파싱 완료:`, orders.length, '개');
+        console.log('주문 누적: ' + senderNumber + ' / 총 ' + session.orders.length + '개');
       } else {
         io.emit('message_received', {
           sender: senderLabel,
@@ -224,7 +351,7 @@ async function connectWhatsApp() {
           text,
           receivedAt: new Date().toLocaleString('ko-KR'),
         });
-        console.log(`💬 일반 메시지 전송`);
+        console.log('일반 메시지 전송');
       }
     }
   });
