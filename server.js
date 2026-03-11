@@ -189,14 +189,14 @@ async function connectWhatsApp() {
         if (text.trim() === '0') {
           delete orderSessions[senderNumber];
           await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
-            text: '주문이 취소되었습니다.'
+            text: 'Your order has been cancelled.'
           });
           console.log('주문 취소: ' + senderNumber);
           continue;
         }
         if (text.trim() === '9') {
           await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
-            text: 'http://gchase.co.za/payment.html'
+            text: 'https://tinyurl.com/dkmf9w5x'
           });
           delete orderSessions[senderNumber];
           console.log('결제 URL 발송: ' + senderNumber);
@@ -209,7 +209,7 @@ async function connectWhatsApp() {
         const session = orderSessions[senderNumber];
         if (!session || session.orders.length === 0) {
           await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
-            text: '주문 내역이 없습니다.'
+            text: 'No order found.'
           });
         } else {
           // 회원 조회
@@ -244,7 +244,7 @@ async function connectWhatsApp() {
           // 최종 확인 메시지 발송
           const total = session.orders.reduce((sum, o) => sum + (o.item.price * o.qty), 0);
           const lines = [];
-          lines.push('[최종 주문 확인]');
+          lines.push('[Order Confirmation]');
           lines.push('---');
           session.orders.forEach(o => {
             let line = o.item.item_name;
@@ -253,16 +253,16 @@ async function connectWhatsApp() {
             lines.push(line);
           });
           lines.push('---');
-          lines.push('합계: R' + total.toLocaleString());
+          lines.push('Total: R' + total.toLocaleString());
           lines.push(new Date().toLocaleString('ko-KR'));
-          lines.push(userId ? '주문이 저장되었습니다.' : '미등록 회원입니다. 관리자에게 문의해주세요.');
+          lines.push(userId ? 'Your order has been saved.' : 'Unregistered user. Please contact the administrator.');
           const confirmText = lines.join('\n');
           await sock.sendMessage(senderNumber + '@s.whatsapp.net', { text: confirmText });
           console.log('최종 주문 확인 발송: ' + senderNumber);
 
           // 결제 선택 메시지 발송
           await sock.sendMessage(senderNumber + '@s.whatsapp.net', {
-            text: '0: 취소\n9: 결제'
+            text: '0: Cancel\n9: Pay'
           });
 
 
@@ -327,7 +327,7 @@ async function connectWhatsApp() {
 
         // 누적 현황 답장
         const lines = [];
-        lines.push('[주문 추가됨]');
+        lines.push('[Item Added]');
         orders.forEach(o => {
           let line = o.item.item_name;
           if (o.item.brand) line += ' (' + o.item.brand + ')';
@@ -335,13 +335,13 @@ async function connectWhatsApp() {
           lines.push(line);
         });
         lines.push('---');
-        lines.push('[현재 누적 주문]');
+        lines.push('[Current Order]');
         session.orders.forEach(o => {
           let line = o.no + '. ' + o.item.item_name + ' x ' + o.qty;
           lines.push(line);
         });
-        lines.push('누적 합계: R' + runningTotal.toLocaleString());
-        lines.push('계속 주문하거나 0을 입력하면 주문이 완료됩니다.');
+        lines.push('Running total: R' + runningTotal.toLocaleString());
+        lines.push('Continue ordering or enter 0 to complete.');
         const replyText = lines.join('\n');
         await sock.sendMessage(senderNumber + '@s.whatsapp.net', { text: replyText });
 
@@ -414,7 +414,7 @@ app.post('/api/send-menu-all', async (req, res) => {
     );
     menuCache = rows;
 
-    let menuText = '[주문 메뉴]\n';
+    let menuText = '[Order Menu]\n';
     menuText += '---\n';
     rows.forEach((item, i) => {
       menuText += (i+1) + '. ' + item.item_name;
@@ -423,10 +423,10 @@ app.post('/api/send-menu-all', async (req, res) => {
       menuText += ' · R' + item.price + '\n';
     });
     menuText += '---\n';
-    menuText += '번호와 수량을 입력해주세요\n';
-    menuText += '예) 1 2  →  1번 상품 2개\n';
-    menuText += '    1 2 3 4  →  1번 2개, 3번 4개\n';
-    menuText += '0을 입력하면 주문이 완료됩니다.';
+    menuText += 'Please enter item number and quantity\n';
+    menuText += 'e.g. 1 2  →  Item 1, qty 2\n';
+    menuText += '     1 2 3 4  →  Item 1 x2, Item 3 x4\n';
+    menuText += 'Enter 0 to complete your order.';
 
     const numbers = loadNumbers();
     let count = 0;
@@ -464,9 +464,9 @@ app.post('/api/send-menu', async (req, res) => {
       menuText += ` · R${item.price}\n`;
     });
     menuText += '━━━━━━━━━━━━━━━\n';
-    menuText += '📌 번호와 수량을 입력해주세요\n';
-    menuText += '예) 1 2  →  1번 상품 2개\n';
-    menuText += '    1 2 3 4  →  1번 2개, 3번 4개';
+    menuText += '📌 Please enter item number and quantity\n';
+    menuText += 'e.g. 1 2  →  Item 1, qty 2\n';
+    menuText += '     1 2 3 4  →  Item 1 x2, Item 3 x4';
 
     const jid = `${number}@s.whatsapp.net`;
     await sock.sendMessage(jid, { text: menuText });
