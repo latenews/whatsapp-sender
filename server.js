@@ -159,6 +159,17 @@ async function connectWhatsApp() {
 
       console.log(`✅ 매칭: ${found ? found.label : '미등록'}`);
 
+      // 미등록 번호는 무시
+      if (!found) {
+        io.emit('message_received', {
+          sender: senderNumber + ' (미등록)',
+          senderNumber,
+          text,
+          receivedAt: new Date().toLocaleString('ko-KR'),
+        });
+        continue;
+      }
+
       // menuCache 없으면 DB에서 자동 로드
       if (menuCache.length === 0) {
         try {
@@ -394,6 +405,47 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
+// 전체 번호에 메뉴 발송
+app.post('/api/send-menu-all', async (req, res) => {
+  if (!clientReady || !sock) return res.status(503).json({ success: false, error: 'WhatsApp 미연결' });
+  try {
+    const [rows] = await pool.query(
+      'SELECT item_id, item_name, brand, volume, price FROM items ORDER BY item_id ASC'
+    );
+    menuCache = rows;
+
+    let menuText = '[주문 메뉴]\n';
+    menuText += '---\n';
+    rows.forEach((item, i) => {
+      menuText += (i+1) + '. ' + item.item_name;
+      if (item.brand) menuText += ' (' + item.brand + ')';
+      if (item.volume) menuText += ' - ' + item.volume;
+      menuText += ' · R' + item.price + '\n';
+    });
+    menuText += '---\n';
+    menuText += '번호와 수량을 입력해주세요\n';
+    menuText += '예) 1 2  →  1번 상품 2개\n';
+    menuText += '    1 2 3 4  →  1번 2개, 3번 4개\n';
+    menuText += '0을 입력하면 주문이 완료됩니다.';
+
+    const numbers = loadNumbers();
+    let count = 0;
+    for (const n of numbers) {
+      try {
+        const jid = n.number + '@s.whatsapp.net';
+        await sock.sendMessage(jid, { text: menuText });
+        count++;
+        console.log('전체 발송: ' + jid);
+      } catch(e) {
+        console.log('발송 실패 ' + n.number + ':', e.message);
+      }
+    }
+    res.json({ success: true, count });
+  } catch(err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/send-menu', async (req, res) => {
   const { number } = req.body;
   if (!clientReady || !sock) return res.status(503).json({ success: false, error: 'WhatsApp 미연결' });
@@ -421,6 +473,30 @@ app.post('/api/send-menu', async (req, res) => {
     console.log('✓ 메뉴 발송:', jid);
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 전체 번호에 일반 메시지 발송
+app.post('/api/send-all', async (req, res) => {
+  const { message } = req.body;
+  if (!clientReady || !sock) return res.status(503).json({ success: false, error: 'WhatsApp 미연결' });
+  if (!message?.trim()) return res.status(400).json({ success: false, error: '메시지 없음' });
+  try {
+    const numbers = loadNumbers();
+    let count = 0;
+    for (const n of numbers) {
+      try {
+        const jid = n.number + '@s.whatsapp.net';
+        await sock.sendMessage(jid, { text: message });
+        count++;
+        console.log('전체 발송: ' + jid);
+      } catch(e) {
+        console.log('발송 실패 ' + n.number + ':', e.message);
+      }
+    }
+    res.json({ success: true, count });
+  } catch(err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });

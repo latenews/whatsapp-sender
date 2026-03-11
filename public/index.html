@@ -173,6 +173,7 @@
       
       <div id="menu-preview"></div>
       <button class="btn-menu" id="btn-send-menu" onclick="sendMenuAuto()" disabled>📋 상품 목록 발송</button>
+      <button class="btn-menu" id="btn-send-all" onclick="sendMenuToAll()" style="background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.3);color:var(--green);margin-top:8px;">📢 전체 번호에 발송</button>
       <div class="result-box" id="menu-result"></div>
     </div>
 
@@ -183,7 +184,10 @@
         oninput="document.getElementById('char-count').textContent=this.value.length+' / 4096'"
         maxlength="4096"></textarea>
       <div class="char-count" id="char-count">0 / 4096</div>
-      <button class="btn-send" id="send-btn" onclick="sendMessage()" disabled>📤 메시지 전송</button>
+      <div class="row">
+        <button class="btn-send" id="send-btn" onclick="sendMessage()" disabled style="flex:1">📤 메시지 전송</button>
+        <button class="btn-send" id="send-all-btn" onclick="sendMessageToAll()" disabled style="flex:1;background:rgba(37,211,102,0.8);">📢 전체 발송</button>
+      </div>
       <div class="result-box" id="result-box"></div>
     </div>
 
@@ -214,6 +218,7 @@ socket.on('status', ({ ready, message }) => {
   document.getElementById('status-text').textContent = message;
   dot.className = 'status-dot ' + (ready ? 'connected' : 'loading');
   document.getElementById('send-btn').disabled = !ready;
+  document.getElementById('send-all-btn').disabled = !ready;
   document.getElementById('btn-send-menu').disabled = !ready;
 });
 socket.on('qr', dataUrl => {
@@ -223,6 +228,8 @@ socket.on('qr', dataUrl => {
 socket.on('ready', () => {
   document.getElementById('qr-section').classList.remove('show');
   document.getElementById('send-btn').disabled = false;
+  document.getElementById('send-all-btn').disabled = false;
+  document.getElementById('btn-send-menu').disabled = false;
 });
 
 // 주문 수신
@@ -372,7 +379,7 @@ async function addNumber() {
 
 async function deleteNumber(number) {
   if (!confirm('이 번호를 삭제할까요?')) return;
-  await fetch(`/api/numbers/${number}`, { method:'DELETE' });
+  await fetch('/api/numbers/' + number, { method:'DELETE' });
   loadNumbers();
 }
 
@@ -406,6 +413,62 @@ async function sendMenuAuto() {
   btn.textContent="📋 상품 목록 발송";
 }
 
+
+// 전체 번호에 메뉴 발송
+async function sendMenuToAll() {
+  const btn = document.getElementById('btn-send-all');
+  const result = document.getElementById('menu-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ 전체 발송 중...';
+  result.className = 'result-box';
+  try {
+    const res = await fetch('/api/send-menu-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className = 'result-box success';
+      result.textContent = '✓ 전체 발송 완료 (' + data.count + '명)';
+    } else {
+      result.className = 'result-box fail';
+      result.textContent = '✗ ' + data.error;
+    }
+  } catch(err) {
+    result.className = 'result-box fail';
+    result.textContent = '✗ ' + err.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '📢 전체 번호에 발송';
+}
+
+// 전체 번호에 메뉴 발송
+async function sendMenuToAll() {
+  const btn = document.getElementById('btn-send-all');
+  const result = document.getElementById('menu-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ 전체 발송 중...';
+  result.className = 'result-box';
+  try {
+    const res = await fetch('/api/send-menu-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className = 'result-box success';
+      result.textContent = '✓ 전체 발송 완료 (' + data.count + '명)';
+    } else {
+      result.className = 'result-box fail';
+      result.textContent = '✗ ' + data.error;
+    }
+  } catch(err) {
+    result.className = 'result-box fail';
+    result.textContent = '✗ ' + err.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '📢 전체 번호에 발송';
+}
 
 // 상품 목록 자동 로드 후 발송
 async function sendMenuAll() {
@@ -496,6 +559,39 @@ async function sendMenu() {
   }
   btn.disabled = false;
   btn.textContent = '📤 선택한 번호로 메뉴 발송';
+}
+
+// 전체 번호에 일반 메시지 전송
+async function sendMessageToAll() {
+  const message = document.getElementById('message').value.trim();
+  if (!message) return alert('메시지를 입력해주세요');
+  const btn = document.getElementById('send-all-btn');
+  const result = document.getElementById('result-box');
+  btn.disabled = true;
+  btn.textContent = '⏳ 전체 발송 중...';
+  result.className = 'result-box';
+  try {
+    const res = await fetch('/api/send-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.className = 'result-box success';
+      result.textContent = '✓ 전체 발송 완료 (' + data.count + '명)';
+      document.getElementById('message').value = '';
+      document.getElementById('char-count').textContent = '0 / 4096';
+    } else {
+      result.className = 'result-box fail';
+      result.textContent = '✗ ' + data.error;
+    }
+  } catch(err) {
+    result.className = 'result-box fail';
+    result.textContent = '✗ ' + err.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '📢 전체 발송';
 }
 
 // 일반 메시지 전송
